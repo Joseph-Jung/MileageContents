@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Airline Mileage Deals - August 2025</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🛫 Airline Mileage Deals</h1>
+            <p class="subtitle">Latest deals for August 2025</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="filter-section">
+            <h2>Filter Deals</h2>
+            <div class="filters">
+                <select id="airlineFilter">
+                    <option value="">All Airlines</option>
+                    <option value="Delta">Delta</option>
+                    <option value="United">United</option>
+                    <option value="American">American Airlines</option>
+                    <option value="Southwest">Southwest</option>
+                    <option value="JetBlue">JetBlue</option>
+                </select>
+                <select id="regionFilter">
+                    <option value="">All Regions</option>
+                    <option value="Domestic">Domestic</option>
+                    <option value="Europe">Europe</option>
+                    <option value="Asia">Asia</option>
+                    <option value="Caribbean">Caribbean</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="deals-section">
+            <h2>Current Mileage Deals</h2>
+            <div id="dealsContainer" class="deals-grid">
+                <!-- Deals will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="last-updated">
+            <p>Last updated: <span id="lastUpdated"></span></p>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 MileageContents. Deals subject to availability and terms.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
