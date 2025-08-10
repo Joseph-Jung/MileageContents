@@ -1,103 +1,7 @@
-const mileageDeals = [
-    {
-        id: 1,
-        airline: "Delta",
-        route: "New York → Paris",
-        region: "Europe",
-        milesRequired: 50000,
-        regularPrice: 850,
-        mileagePrice: 350,
-        savings: 500,
-        validUntil: "2025-08-31",
-        availability: "Limited"
-    },
-    {
-        id: 2,
-        airline: "United",
-        route: "Los Angeles → Tokyo",
-        region: "Asia",
-        milesRequired: 70000,
-        regularPrice: 1200,
-        mileagePrice: 400,
-        savings: 800,
-        validUntil: "2025-08-25",
-        availability: "Good"
-    },
-    {
-        id: 3,
-        airline: "American",
-        route: "Chicago → London",
-        region: "Europe",
-        milesRequired: 45000,
-        regularPrice: 750,
-        mileagePrice: 280,
-        savings: 470,
-        validUntil: "2025-08-30",
-        availability: "Limited"
-    },
-    {
-        id: 4,
-        airline: "Southwest",
-        route: "Denver → Las Vegas",
-        region: "Domestic",
-        milesRequired: 15000,
-        regularPrice: 280,
-        mileagePrice: 85,
-        savings: 195,
-        validUntil: "2025-08-28",
-        availability: "Excellent"
-    },
-    {
-        id: 5,
-        airline: "JetBlue",
-        route: "Boston → Barbados",
-        region: "Caribbean",
-        milesRequired: 35000,
-        regularPrice: 650,
-        mileagePrice: 220,
-        savings: 430,
-        validUntil: "2025-08-27",
-        availability: "Good"
-    },
-    {
-        id: 6,
-        airline: "Delta",
-        route: "Seattle → Amsterdam",
-        region: "Europe",
-        milesRequired: 55000,
-        regularPrice: 900,
-        mileagePrice: 380,
-        savings: 520,
-        validUntil: "2025-08-29",
-        availability: "Limited"
-    },
-    {
-        id: 7,
-        airline: "United",
-        route: "San Francisco → Singapore",
-        region: "Asia",
-        milesRequired: 80000,
-        regularPrice: 1400,
-        mileagePrice: 450,
-        savings: 950,
-        validUntil: "2025-08-26",
-        availability: "Good"
-    },
-    {
-        id: 8,
-        airline: "American",
-        route: "Miami → Mexico City",
-        region: "Domestic",
-        milesRequired: 25000,
-        regularPrice: 420,
-        mileagePrice: 140,
-        savings: 280,
-        validUntil: "2025-08-31",
-        availability: "Excellent"
-    }
-];
-
-let filteredDeals = [...mileageDeals];
+let mileageDeals = [];
+let filteredDeals = [];
+let isLoading = false;
+let dataSource = 'unknown';
 
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-US', {
@@ -128,12 +32,19 @@ function getAvailabilityColor(availability) {
 }
 
 function createDealCard(deal) {
+    const dataSourceBadge = deal.isLiveData 
+        ? '<div class="data-source-badge live">🔴 LIVE</div>' 
+        : '<div class="data-source-badge mock">📊 DEMO</div>';
+    
     return `
         <div class="deal-card" data-airline="${deal.airline}" data-region="${deal.region}">
             <div class="deal-header">
                 <div class="airline-name">${deal.airline}</div>
-                <div class="deal-badge" style="background-color: ${getAvailabilityColor(deal.availability)}">
-                    ${deal.availability}
+                <div class="header-badges">
+                    ${dataSourceBadge}
+                    <div class="deal-badge" style="background-color: ${getAvailabilityColor(deal.availability)}">
+                        ${deal.availability}
+                    </div>
                 </div>
             </div>
             
@@ -173,11 +84,23 @@ function createDealCard(deal) {
 function renderDeals(deals) {
     const container = document.getElementById('dealsContainer');
     
+    if (isLoading) {
+        container.innerHTML = `
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <h3>Loading latest deals...</h3>
+                <p>Fetching real-time airline mileage data</p>
+            </div>
+        `;
+        return;
+    }
+    
     if (deals.length === 0) {
         container.innerHTML = `
             <div class="no-deals">
                 <h3>No deals match your current filters</h3>
                 <p>Try adjusting your filter criteria to see more options.</p>
+                <button onclick="refreshDeals()" class="refresh-button">🔄 Refresh Deals</button>
             </div>
         `;
         return;
@@ -206,27 +129,112 @@ function bookDeal(dealId) {
     }
 }
 
-function updateLastUpdated() {
-    const now = new Date();
-    const options = {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/New_York'
-    };
-    
-    document.getElementById('lastUpdated').textContent = 
-        now.toLocaleDateString('en-US', options) + ' ET';
+async function fetchDeals() {
+    try {
+        isLoading = true;
+        renderDeals([]);
+        
+        const response = await fetch('/api/deals');
+        const result = await response.json();
+        
+        if (result.success) {
+            mileageDeals = result.data;
+            filteredDeals = [...mileageDeals];
+            dataSource = result.source;
+            updateDataSourceIndicator(result.source);
+            updateLastUpdated(result.timestamp);
+        } else {
+            console.error('API Error:', result.error);
+            showError('Failed to load deals: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Fetch Error:', error);
+        showError('Network error. Please check your connection.');
+    } finally {
+        isLoading = false;
+        renderDeals(filteredDeals);
+    }
 }
 
-function initializeApp() {
-    renderDeals(filteredDeals);
-    updateLastUpdated();
+async function refreshDeals() {
+    try {
+        isLoading = true;
+        renderDeals([]);
+        
+        const response = await fetch('/api/deals/refresh', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+            mileageDeals = result.data;
+            filteredDeals = [...mileageDeals];
+            updateDataSourceIndicator('live');
+            updateLastUpdated(result.timestamp);
+            showSuccess('Deals refreshed successfully!');
+        } else {
+            console.error('Refresh Error:', result.error);
+            showError('Failed to refresh deals: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Refresh Error:', error);
+        showError('Network error during refresh.');
+    } finally {
+        isLoading = false;
+        renderDeals(filteredDeals);
+    }
+}
+
+function updateDataSourceIndicator(source) {
+    const indicator = document.getElementById('dataSourceIndicator');
+    if (indicator) {
+        indicator.textContent = source === 'live' ? '🔴 Live Data' : '📊 Demo Data';
+        indicator.className = `data-source ${source}`;
+    }
+}
+
+function updateLastUpdated(timestamp) {
+    const lastUpdatedElement = document.getElementById('lastUpdated');
+    if (lastUpdatedElement) {
+        const date = new Date(timestamp || Date.now());
+        const options = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'America/New_York'
+        };
+        
+        lastUpdatedElement.textContent = date.toLocaleDateString('en-US', options) + ' ET';
+    }
+}
+
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-toast';
+    errorDiv.textContent = message;
+    document.body.appendChild(errorDiv);
     
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 5000);
+}
+
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-toast';
+    successDiv.textContent = message;
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.remove();
+    }, 3000);
+}
+
+async function initializeApp() {
     document.getElementById('airlineFilter').addEventListener('change', filterDeals);
     document.getElementById('regionFilter').addEventListener('change', filterDeals);
+    
+    await fetchDeals();
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);
